@@ -59,3 +59,7 @@ bin/*
 
 # Compilation files
 src/*.syso
+
+# Javascript
+node_modules
+web/**/dist
