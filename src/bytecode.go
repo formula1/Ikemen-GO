@@ -162,6 +162,7 @@ const (
 	OC_powermax
 	OC_canrecover
 	OC_roundstate
+	OC_roundswon
 	OC_ishelper
 	OC_numhelper
 	OC_numexplod
@@ -739,9 +740,6 @@ const (
 	OC_ex2_palfxvar_all_invertblend
 	OC_ex2_introstate
 	OC_ex2_outrostate
-	OC_ex2_continuescreen
-	OC_ex2_victoryscreen
-	OC_ex2_winscreen
 	OC_ex2_bgmvar_filename
 	OC_ex2_bgmvar_freqmul
 	OC_ex2_bgmvar_length
@@ -861,7 +859,20 @@ const (
 	OC_ex2_soundvar_priority
 	OC_ex2_soundvar_startposition
 	OC_ex2_soundvar_volumescale
+	OC_ex2_fightscreenstate_fightdisplay
+	OC_ex2_fightscreenstate_kodisplay
+	OC_ex2_fightscreenstate_rounddisplay
+	OC_ex2_fightscreenstate_windisplay
+	OC_ex2_motifstate_continuescreen
+	OC_ex2_motifstate_victoryscreen
+	OC_ex2_motifstate_winscreen
+	OC_ex2_systemvar_introtime
+	OC_ex2_systemvar_outrotime
+	OC_ex2_systemvar_pausetime
+	OC_ex2_systemvar_slowtime
+	OC_ex2_systemvar_superpausetime
 )
+
 const (
 	NumVar     = 60
 	NumSysVar  = 5
@@ -1830,6 +1841,8 @@ func (be BytecodeExp) run(c *Char) BytecodeValue {
 			sys.bcStack.PushF(c.rightEdge() * (c.localscl / oc.localscl))
 		case OC_roundstate:
 			sys.bcStack.PushI(sys.roundState())
+		case OC_roundswon:
+			sys.bcStack.PushI(c.roundsWon())
 		case OC_screenheight:
 			sys.bcStack.PushF(c.screenHeight())
 		case OC_screenpos_x:
@@ -2225,6 +2238,7 @@ func (be BytecodeExp) run_const(c *Char, i *int, oc *Char) {
 		sys.bcStack.PushB(p8 != nil &&
 			p8.gi().nameLow == sys.stringPool[sys.workingState.playerNo].List[*(*int32)(unsafe.Pointer(&be[*i]))])
 		*i += 4
+	// StageVar
 	case OC_const_stagevar_info_name:
 		sys.bcStack.PushB(sys.stage.nameLow ==
 			sys.stringPool[sys.workingState.playerNo].List[*(*int32)(
@@ -2986,7 +3000,7 @@ func (be BytecodeExp) run_ex(c *Char, i *int, oc *Char) {
 	case OC_ex_mugenversion:
 		sys.bcStack.PushF(c.mugenVersionF())
 	case OC_ex_pausetime:
-		sys.bcStack.PushI(c.pauseTime())
+		sys.bcStack.PushI(c.pauseTimeTrigger())
 	case OC_ex_physics:
 		sys.bcStack.PushB(c.ss.physics == StateType(be[*i]))
 		*i++
@@ -3185,12 +3199,6 @@ func (be BytecodeExp) run_ex2(c *Char, i *int, oc *Char) {
 		sys.bcStack.PushI(sys.introState())
 	case OC_ex2_outrostate:
 		sys.bcStack.PushI(sys.outroState())
-	case OC_ex2_continuescreen:
-		sys.bcStack.PushB(sys.continueScreenFlg)
-	case OC_ex2_victoryscreen:
-		sys.bcStack.PushB(sys.victoryScreenFlg)
-	case OC_ex2_winscreen:
-		sys.bcStack.PushB(sys.winScreenFlg)
 	case OC_ex2_bgmvar_filename:
 		sys.bcStack.PushB(sys.bgm.filename ==
 			sys.stringPool[sys.workingState.playerNo].List[*(*int32)(
@@ -3512,6 +3520,42 @@ func (be BytecodeExp) run_ex2(c *Char, i *int, oc *Char) {
 		v := c.projVar(id, idx, flg, opc, oc)
 		sys.bcStack.Push(v)
 	// END FALLTHROUGH (projvar)
+	// FightScreenState
+	case OC_ex2_fightscreenstate_fightdisplay:
+		sys.bcStack.PushB(sys.lifebar.ro.triggerFightDisplay)
+	case OC_ex2_fightscreenstate_kodisplay:
+		sys.bcStack.PushB(sys.lifebar.ro.triggerKODisplay)
+	case OC_ex2_fightscreenstate_rounddisplay:
+		sys.bcStack.PushB(sys.lifebar.ro.triggerRoundDisplay)
+	case OC_ex2_fightscreenstate_windisplay:
+		sys.bcStack.PushB(sys.lifebar.ro.triggerWinDisplay)
+	// MotifState
+	case OC_ex2_motifstate_continuescreen:
+		sys.bcStack.PushB(sys.continueScreenFlg)
+	case OC_ex2_motifstate_victoryscreen:
+		sys.bcStack.PushB(sys.victoryScreenFlg)
+	case OC_ex2_motifstate_winscreen:
+		sys.bcStack.PushB(sys.winScreenFlg)
+	// SystemVar
+	case OC_ex2_systemvar_introtime:
+		if sys.intro > 0 {
+			sys.bcStack.PushI(sys.intro)
+		} else {
+			sys.bcStack.PushI(0)
+		}
+	case OC_ex2_systemvar_outrotime:
+		if sys.intro < 0 {
+			sys.bcStack.PushI(-sys.intro)
+		} else {
+			sys.bcStack.PushI(0)
+		}
+	case OC_ex2_systemvar_pausetime:
+		sys.bcStack.PushI(sys.pausetime)
+	case OC_ex2_systemvar_slowtime:
+		sys.bcStack.PushI(sys.slowtimeTrigger)
+	case OC_ex2_systemvar_superpausetime:
+		sys.bcStack.PushI(sys.supertime)
+	// HitDefVar
 	case OC_ex2_hitdefvar_guardflag:
 		attr := (*(*int32)(unsafe.Pointer(&be[*i])))
 		sys.bcStack.PushB(
@@ -11684,38 +11728,38 @@ const (
 
 func (sc modifyStageVar) Run(c *Char, _ []int32) bool {
 	//crun := c RedirectID is pointless when modifying a stage
-	s := *&sys.stage
+	s := sys.stage
 	StateControllerBase(sc).run(c, func(id byte, exp []BytecodeExp) bool {
 		switch id {
 		// Camera group
 		case modifyStageVar_camera_autocenter:
 			s.stageCamera.autocenter = exp[0].evalB(c)
 		case modifyStageVar_camera_boundleft:
-			s.stageCamera.boundleft = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.boundleft = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_boundright:
-			s.stageCamera.boundright = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.boundright = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_boundhigh:
-			s.stageCamera.boundhigh = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.boundhigh = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_boundlow:
-			s.stageCamera.boundlow = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.boundlow = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_verticalfollow:
 			s.stageCamera.verticalfollow = exp[0].evalF(c)
 		case modifyStageVar_camera_floortension:
-			s.stageCamera.floortension = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.floortension = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_lowestcap:
 			s.stageCamera.lowestcap = exp[0].evalB(c)
 		case modifyStageVar_camera_tensionhigh:
-			s.stageCamera.tensionhigh = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.tensionhigh = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_tensionlow:
-			s.stageCamera.tensionlow = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.tensionlow = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_tension:
-			s.stageCamera.tension = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.tension = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_tensionvel:
 			s.stageCamera.tensionvel = exp[0].evalF(c)
 		case modifyStageVar_camera_cuthigh:
-			s.stageCamera.cuthigh = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.cuthigh = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_cutlow:
-			s.stageCamera.cutlow = int32(exp[0].evalF(c) * c.localscl / sys.stage.localscl)
+			s.stageCamera.cutlow = int32(exp[0].evalF(c) * c.localscl / s.localscl)
 		case modifyStageVar_camera_startzoom:
 			s.stageCamera.startzoom = exp[0].evalF(c)
 		case modifyStageVar_camera_zoomout:
@@ -11734,13 +11778,13 @@ func (sc modifyStageVar) Run(c *Char, _ []int32) bool {
 			s.stageCamera.yscrollspeed = exp[0].evalF(c)
 		// PlayerInfo group
 		case modifyStageVar_playerinfo_leftbound:
-			s.leftbound = exp[0].evalF(c) * c.localscl / sys.stage.localscl
+			s.leftbound = exp[0].evalF(c) * c.localscl / s.localscl
 		case modifyStageVar_playerinfo_rightbound:
-			s.rightbound = exp[0].evalF(c) * c.localscl / sys.stage.localscl
+			s.rightbound = exp[0].evalF(c) * c.localscl / s.localscl
 		case modifyStageVar_playerinfo_topbound:
-			s.topbound = exp[0].evalF(c) * c.localscl / sys.stage.localscl
+			s.topbound = exp[0].evalF(c) * c.localscl / s.localscl
 		case modifyStageVar_playerinfo_botbound:
-			s.botbound = exp[0].evalF(c) * c.localscl / sys.stage.localscl
+			s.botbound = exp[0].evalF(c) * c.localscl / s.localscl
 		// Scaling group
 		case modifyStageVar_scaling_topz:
 			if s.mugenver[0] != 1 { // mugen 1.0+ removed support for topz
@@ -11808,7 +11852,7 @@ func (sc modifyStageVar) Run(c *Char, _ []int32) bool {
 		}
 		return true
 	})
-	sys.stage.reload = true // Stage will have to be reloaded if it's re-selected
+	s.reload = true // Stage will have to be reloaded if it's re-selected
 	sys.cam.stageCamera = s.stageCamera
 	sys.cam.Reset() // TODO: Resetting the camera makes the zoom jitter
 	return false
@@ -11864,6 +11908,52 @@ func (sc height) Run(c *Char, _ []int32) bool {
 				crun.setBHeight(exp[1].evalF(c) * redirscale)
 			}
 		case height_redirectid:
+			if rid := sys.playerID(exp[0].evalI(c)); rid != nil {
+				crun = rid
+				redirscale = (320 / c.localcoord) / (320 / crun.localcoord)
+			} else {
+				return false
+			}
+		}
+		return true
+	})
+	return false
+}
+
+type depth StateControllerBase
+
+const (
+	depth_edge byte = iota
+	depth_player
+	depth_value
+	depth_redirectid
+)
+
+func (sc depth) Run(c *Char, _ []int32) bool {
+	crun := c
+	var redirscale float32 = 1.0
+	StateControllerBase(sc).run(c, func(id byte, exp []BytecodeExp) bool {
+		switch id {
+		case depth_edge:
+			crun.setFDepthEdge(exp[0].evalF(c) * redirscale)
+			if len(exp) > 1 {
+				crun.setBDepthEdge(exp[1].evalF(c) * redirscale)
+			}
+		case depth_player:
+			crun.setFDepth(exp[0].evalF(c) * redirscale)
+			if len(exp) > 1 {
+				crun.setBDepth(exp[1].evalF(c) * redirscale)
+			}
+		case depth_value:
+			v1 := exp[0].evalF(c) * redirscale
+			crun.setFDepthEdge(v1)
+			crun.setFDepth(v1)
+			if len(exp) > 1 {
+				v2 := exp[1].evalF(c) * redirscale
+				crun.setBDepthEdge(v2)
+				crun.setBDepth(v2)
+			}
+		case depth_redirectid:
 			if rid := sys.playerID(exp[0].evalI(c)); rid != nil {
 				crun = rid
 				redirscale = (320 / c.localcoord) / (320 / crun.localcoord)

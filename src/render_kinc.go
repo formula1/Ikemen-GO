@@ -102,7 +102,7 @@ func (t *Texture) SetData(data []byte) {
 }
 
 func (t *Texture) IsValid() bool {
-	return true
+	return t.width != 0 && t.height != 0
 }
 
 // ------------------------------------------------------------------

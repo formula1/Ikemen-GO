@@ -1218,6 +1218,17 @@ func (fa *LifeBarFace) bgDraw(layerno int16) {
 
 func (fa *LifeBarFace) draw(layerno int16, ref int, far *LifeBarFace) {
 	if far.face != nil {
+		// Get player current PalFX if applicable
+		pfx := newPalFX()
+		if far.palfxshare {
+			pfx = sys.chars[ref][0].getPalfx()
+		}
+
+		// Swap palette maps to get the player's current palette
+		if far.palshare {
+			sys.cgi[ref].palettedata.palList.SwapPalMap(&sys.chars[ref][0].getPalfx().remap)
+		}
+
 		// Get texture
 		far.face.Pal = nil
 		if far.face.PalTex != nil {
@@ -1226,22 +1237,16 @@ func (fa *LifeBarFace) draw(layerno int16, ref int, far *LifeBarFace) {
 			far.face.Pal = far.face.GetPal(&sys.cgi[ref].palettedata.palList)
 		}
 
-		// Palette handling
+		// Revert palette maps to initial state
 		if far.palshare {
 			sys.cgi[ref].palettedata.palList.SwapPalMap(&sys.chars[ref][0].getPalfx().remap)
-		}
-
-		// PalFX handling
-		pfx := newPalFX()
-		if far.palfxshare {
-			pfx = sys.chars[ref][0].getPalfx()
 		}
 
 		// TODO: PalFX sharing has a bug in Tag in that it uses the parameter from the char's original placement in the team
 		// For instance if player 3 tags in, they will use p3 palette options instead of p1
 		// https://github.com/ikemen-engine/Ikemen-GO/issues/2269
 
-		// Keep brightness if player initiated SuperPause
+		// Reset system brightness if player initiated SuperPause (cancel "darken" parameter)
 		ob := sys.brightness
 		if ref == sys.superplayer {
 			sys.brightness = 256
@@ -1256,7 +1261,7 @@ func (fa *LifeBarFace) draw(layerno int16, ref int, far *LifeBarFace) {
 			fa.ko.Draw(float32(fa.pos[0])+sys.lifebarOffsetX, float32(fa.pos[1]), layerno, sys.lifebarScale)
 		}
 
-		// Restore system brightness
+		// Restore original system brightness
 		sys.brightness = ob
 
 		// Turns mode teammates
@@ -1936,71 +1941,75 @@ func (ac *LifeBarAction) draw(layerno int16, f []*Fnt, side int) {
 }
 
 type LifeBarRound struct {
-	snd                *Snd
-	pos                [2]int32
-	match_wins         [2]int32
-	match_maxdrawgames [2]int32
-	start_waittime     int32
-	round_time         int32
-	round_sndtime      int32
-	round              [9]AnimTextSnd
-	round_default      AnimTextSnd
-	round_default_top  AnimLayout
-	round_default_bg   [32]AnimLayout
-	round_single       AnimTextSnd
-	round_single_top   AnimLayout
-	round_single_bg    [32]AnimLayout
-	round_final        AnimTextSnd
-	round_final_top    AnimLayout
-	round_final_bg     [32]AnimLayout
-	fight_time         int32
-	fight_sndtime      int32
-	fight              AnimTextSnd
-	fight_top          AnimLayout
-	fight_bg           [32]AnimLayout
-	ctrl_time          int32
-	ko_time            int32
-	ko_sndtime         int32
-	ko, dko, to        AnimTextSnd
-	ko_top             AnimLayout
-	ko_bg              [32]AnimLayout
-	dko_top            AnimLayout
-	dko_bg             [32]AnimLayout
-	to_top             AnimLayout
-	to_bg              [32]AnimLayout
-	slow_time          int32
-	slow_fadetime      int32
-	slow_speed         float32
-	over_waittime      int32
-	over_hittime       int32
-	over_wintime       int32
-	over_time          int32
-	win_time           int32
-	win_sndtime        int32
-	win, win2          [2]AnimTextSnd
-	win_top, win2_top  [2]AnimLayout
-	win_bg, win2_bg    [2][32]AnimLayout
-	win3, win4         [2]AnimTextSnd
-	win3_top, win4_top [2]AnimLayout
-	win3_bg, win4_bg   [2][32]AnimLayout
-	drawgame           AnimTextSnd
-	drawgame_top       AnimLayout
-	drawgame_bg        [32]AnimLayout
-	current            int32
-	waitTimer          [4]int32 // 0 round call; 1 fight call; 2 KO screen; 3 winner announcement
-	waitSoundTimer     [4]int32
-	drawTimer          [4]int32
-	roundCallOver      bool
-	fightCallOver      bool
-	timerActive        bool
-	winType            [WT_NumTypes * 2]LbBgTextSnd
-	fadein_time        int32
-	fadein_col         uint32
-	fadeout_time       int32
-	fadeout_col        uint32
-	shutter_time       int32
-	shutter_col        uint32
-	callfight_time     int32
+	snd                 *Snd
+	pos                 [2]int32
+	match_wins          [2]int32
+	match_maxdrawgames  [2]int32
+	start_waittime      int32
+	round_time          int32
+	round_sndtime       int32
+	round               [9]AnimTextSnd
+	round_default       AnimTextSnd
+	round_default_top   AnimLayout
+	round_default_bg    [32]AnimLayout
+	round_single        AnimTextSnd
+	round_single_top    AnimLayout
+	round_single_bg     [32]AnimLayout
+	round_final         AnimTextSnd
+	round_final_top     AnimLayout
+	round_final_bg      [32]AnimLayout
+	fight_time          int32
+	fight_sndtime       int32
+	fight               AnimTextSnd
+	fight_top           AnimLayout
+	fight_bg            [32]AnimLayout
+	ctrl_time           int32
+	ko_time             int32
+	ko_sndtime          int32
+	ko, dko, to         AnimTextSnd
+	ko_top              AnimLayout
+	ko_bg               [32]AnimLayout
+	dko_top             AnimLayout
+	dko_bg              [32]AnimLayout
+	to_top              AnimLayout
+	to_bg               [32]AnimLayout
+	slow_time           int32
+	slow_fadetime       int32
+	slow_speed          float32
+	over_waittime       int32
+	over_hittime        int32
+	over_wintime        int32
+	over_time           int32
+	win_time            int32
+	win_sndtime         int32
+	win, win2           [2]AnimTextSnd
+	win_top, win2_top   [2]AnimLayout
+	win_bg, win2_bg     [2][32]AnimLayout
+	win3, win4          [2]AnimTextSnd
+	win3_top, win4_top  [2]AnimLayout
+	win3_bg, win4_bg    [2][32]AnimLayout
+	drawgame            AnimTextSnd
+	drawgame_top        AnimLayout
+	drawgame_bg         [32]AnimLayout
+	current             int32
+	waitTimer           [4]int32 // 0 round call; 1 fight call; 2 KO screen; 3 winner announcement
+	waitSoundTimer      [4]int32
+	drawTimer           [4]int32
+	roundCallOver       bool
+	fightCallOver       bool
+	timerActive         bool
+	winType             [WT_NumTypes * 2]LbBgTextSnd
+	fadein_time         int32
+	fadein_col          uint32
+	fadeout_time        int32
+	fadeout_col         uint32
+	shutter_time        int32
+	shutter_col         uint32
+	callfight_time      int32
+	triggerRoundDisplay bool // FightScreenState trigger
+	triggerFightDisplay bool
+	triggerKODisplay    bool
+	triggerWinDisplay   bool
 }
 
 func newLifeBarRound(snd *Snd) *LifeBarRound {
@@ -2323,6 +2332,13 @@ func (ro *LifeBarRound) isFinalRound() bool {
 }
 
 func (ro *LifeBarRound) act() bool {
+	// Reset FightScreenState trigger flags
+	// This method is easier and more accurate than computing the times again for the trigger
+	ro.triggerRoundDisplay = false
+	ro.triggerFightDisplay = false
+	ro.triggerKODisplay = false
+	ro.triggerWinDisplay = false
+	// Early exits
 	if (sys.paused && !sys.step) || sys.gsf(GSF_roundfreeze) {
 		return false
 	}
@@ -2364,7 +2380,7 @@ func (ro *LifeBarRound) act() bool {
 			//	sys.introSkipped = false
 			//}
 			// Round call
-			if sys.gsf(GSF_norounddisplay) && canSkip(0) { // Skip
+			if sys.gsf(GSF_skiprounddisplay) && canSkip(0) { // Skip
 				ro.roundCallOver = true
 				ro.waitTimer[1] = 0
 			}
@@ -2388,6 +2404,7 @@ func (ro *LifeBarRound) act() bool {
 				ro.waitSoundTimer[0]--
 				// Animations
 				if ro.waitTimer[0] <= 0 {
+					ro.triggerRoundDisplay = true
 					ro.drawTimer[0]++
 					if ro.isSingleRound() && ro.round_single.snd[0] != -1 {
 						if len(ro.round_single_top.anim.frames) > 0 {
@@ -2453,7 +2470,7 @@ func (ro *LifeBarRound) act() bool {
 			}
 			// Skip fight call
 			// Cannot be skipped unless round call is finished or also skipped
-			if ro.roundCallOver && sys.gsf(GSF_nofightdisplay) && canSkip(1) {
+			if ro.roundCallOver && sys.gsf(GSF_skipfightdisplay) && canSkip(1) {
 				endFightCall()
 				if sys.intro > 1 {
 					sys.intro = 1 // Skip ctrl waiting time
@@ -2479,6 +2496,7 @@ func (ro *LifeBarRound) act() bool {
 					}
 					ro.waitSoundTimer[1]--
 					if ro.waitTimer[1] <= 0 {
+						ro.triggerFightDisplay = true
 						ro.drawTimer[1]++
 						ro.fight_top.Action()
 						ro.fight.Action()
@@ -2504,7 +2522,7 @@ func (ro *LifeBarRound) act() bool {
 				}
 				ro.timerActive = false
 			}
-			steptimers := func(ats *AnimTextSnd, t int, delay int32) {
+			steptimers := func(ats *AnimTextSnd, t int, delay int32, name string) {
 				if ro.waitSoundTimer[t]+delay == 0 {
 					ro.snd.play(ats.snd, 100, 0, 0, 0, 0)
 					ro.waitSoundTimer[t]--
@@ -2516,41 +2534,50 @@ func (ro *LifeBarRound) act() bool {
 				if ro.waitTimer[t]+delay <= 0 {
 					ro.drawTimer[t]++
 					ats.Action()
+					// Flag FightScreenState while anims are playing
+					if !ats.End(ro.drawTimer[t], true) {
+						switch name {
+						case "ko":
+							ro.triggerKODisplay = true
+						case "win":
+							ro.triggerWinDisplay = true
+						}
+					}
 				}
 				ro.waitTimer[t]--
 			}
 			// KO screen
-			if !(sys.gsf(GSF_nokodisplay) && canSkip(2)) {
+			if !(sys.gsf(GSF_skipkodisplay) && canSkip(2)) {
 				switch sys.finishType {
 				case FT_KO:
 					ro.ko_top.Action()
-					steptimers(&ro.ko, 2, 9)
+					steptimers(&ro.ko, 2, 9, "ko")
 					for i := len(ro.ko_bg) - 1; i >= 0; i-- {
 						ro.ko_bg[i].Action()
 					}
 				case FT_DKO:
 					ro.dko_top.Action()
-					steptimers(&ro.dko, 2, 9)
+					steptimers(&ro.dko, 2, 9, "ko")
 					for i := len(ro.dko_bg) - 1; i >= 0; i-- {
 						ro.dko_bg[i].Action()
 					}
 				default:
 					ro.to_top.Action()
-					steptimers(&ro.to, 2, 15)
+					steptimers(&ro.to, 2, 15, "ko")
 					for i := len(ro.to_bg) - 1; i >= 0; i-- {
 						ro.to_bg[i].Action()
 					}
 				}
 			}
 			// Winner announcement
-			if sys.intro < -(ro.over_waittime) && !(sys.gsf(GSF_nowindisplay) && canSkip(3)) {
+			if sys.intro < -(ro.over_waittime) && !(sys.gsf(GSF_skipwindisplay) && canSkip(3)) {
 				wt := sys.winTeam
 				if wt < 0 {
 					wt = 0
 				}
 				if sys.finishType == FT_TODraw {
 					ro.drawgame_top.Action()
-					steptimers(&ro.drawgame, 3, 0)
+					steptimers(&ro.drawgame, 3, 0, "win")
 					for i := len(ro.drawgame_bg) - 1; i >= 0; i-- {
 						ro.drawgame_bg[i].Action()
 					}
@@ -2558,26 +2585,26 @@ func (ro *LifeBarRound) act() bool {
 					if sys.tmode[sys.winTeam] == TM_Simul || sys.tmode[sys.winTeam] == TM_Tag {
 						if sys.numSimul[sys.winTeam] == 2 {
 							ro.win2_top[wt].Action()
-							steptimers(&ro.win2[wt], 3, 0)
+							steptimers(&ro.win2[wt], 3, 0, "win")
 							for i := len(ro.win2_bg[wt]) - 1; i >= 0; i-- {
 								ro.win2_bg[wt][i].Action()
 							}
 						} else if sys.numSimul[sys.winTeam] == 3 {
 							ro.win3_top[wt].Action()
-							steptimers(&ro.win3[wt], 3, 0)
+							steptimers(&ro.win3[wt], 3, 0, "win")
 							for i := len(ro.win3_bg[wt]) - 1; i >= 0; i-- {
 								ro.win3_bg[wt][i].Action()
 							}
 						} else {
 							ro.win4_top[wt].Action()
-							steptimers(&ro.win4[wt], 3, 0)
+							steptimers(&ro.win4[wt], 3, 0, "win")
 							for i := len(ro.win4_bg[wt]) - 1; i >= 0; i-- {
 								ro.win4_bg[wt][i].Action()
 							}
 						}
 					} else {
 						ro.win_top[wt].Action()
-						steptimers(&ro.win[wt], 3, 0)
+						steptimers(&ro.win[wt], 3, 0, "win")
 						for i := len(ro.win_bg[wt]) - 1; i >= 0; i-- {
 							ro.win_bg[wt][i].Action()
 						}
