@@ -218,6 +218,7 @@ var triggerMap = map[string]int{
 	"backedgebodydist":  1,
 	"backedgedist":      1,
 	"bottomedge":        1,
+	"botboundbodydist":  1,
 	"botbounddist":      1,
 	"camerapos":         1,
 	"camerazoom":        1,
@@ -330,6 +331,7 @@ var triggerMap = map[string]int{
 	"time":              1,
 	"timemod":           1,
 	"topedge":           1,
+	"topboundbodydist":  1,
 	"topbounddist":      1,
 	"uniqhitcount":      1,
 	"var":               1,
@@ -1553,8 +1555,10 @@ func (c *Compiler) expValue(out *BytecodeExp, in *string,
 		}
 	case "bottomedge":
 		out.append(OC_bottomedge)
+	case "botboundbodydist":
+		out.append(OC_ex2_, OC_ex2_botboundbodydist)
 	case "botbounddist":
-		out.append(OC_botbounddist)
+		out.append(OC_ex2_, OC_ex2_botbounddist)
 	case "camerapos":
 		c.token = c.tokenizer(in)
 		switch c.token {
@@ -3314,8 +3318,10 @@ func (c *Compiler) expValue(out *BytecodeExp, in *string,
 		out.append(OC_time)
 	case "topedge":
 		out.append(OC_topedge)
+	case "topboundbodydist":
+		out.append(OC_ex2_, OC_ex2_topboundbodydist)
 	case "topbounddist":
-		out.append(OC_topbounddist)
+		out.append(OC_ex2_, OC_ex2_topbounddist)
 	case "uniqhitcount":
 		out.append(OC_uniqhitcount)
 	case "vel":

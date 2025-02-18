@@ -670,7 +670,7 @@ func (c *Compiler) helper(is IniSection, sc *StateControllerBase, _ int8) (State
 			return err
 		}
 		if err := c.paramValue(is, sc, "pos",
-			helper_pos, VT_Float, 2, false); err != nil {
+			helper_pos, VT_Float, 3, false); err != nil {
 			return err
 		}
 		if err := c.paramValue(is, sc, "facing",
@@ -3389,28 +3389,18 @@ func (c *Compiler) makeDust(is IniSection, sc *StateControllerBase, _ int8) (Sta
 			makeDust_redirectid, VT_Int, 1, false); err != nil {
 			return err
 		}
-		b := false
 		if err := c.stateParam(is, "spacing", false, func(data string) error {
-			b = true
 			return c.scAdd(sc, makeDust_spacing, data, VT_Int, 1)
 		}); err != nil {
 			return err
 		}
-		if !b {
-			sc.add(makeDust_spacing, sc.iToExp(3))
-		}
-		b = false
 		if err := c.stateParam(is, "pos", false, func(data string) error {
-			b = true
-			return c.scAdd(sc, makeDust_pos, data, VT_Float, 2)
+			return c.scAdd(sc, makeDust_pos, data, VT_Float, 3)
 		}); err != nil {
 			return err
 		}
-		if !b {
-			sc.add(makeDust_pos, sc.iToExp(0))
-		}
 		if err := c.paramValue(is, sc, "pos2",
-			makeDust_pos2, VT_Float, 2, false); err != nil {
+			makeDust_pos2, VT_Float, 3, false); err != nil {
 			return err
 		}
 		return nil

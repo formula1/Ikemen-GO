@@ -634,9 +634,7 @@ type HitDef struct {
 	score                      [2]float32
 	p2clsncheck                int32
 	p2clsnrequire              int32
-	attack                     struct {
-		depth [2]float32
-	}
+	attack_depth               [2]float32
 }
 
 func (hd *HitDef) clear(localscl float32) {
@@ -734,10 +732,7 @@ func (hd *HitDef) clear(localscl float32) {
 		fall_envshake_ampl:  IErr,
 		fall_envshake_phase: float32(math.NaN()),
 		fall_envshake_mul:   1.0,
-		// Attack depth
-		attack: struct{ depth [2]float32 }{
-			[2]float32{4 / originLs, 4 / originLs},
-		},
+		attack_depth:        [2]float32{float32(math.NaN()), float32(math.NaN())},
 	}
 	// PalFX
 	hd.palfx.mul = [...]int32{255, 255, 255}
@@ -1195,10 +1190,24 @@ func (ai *AfterImage) recAndCue(sd *SprData, rec bool, hitpause bool, layer int3
 		if ai.time < 0 || (ai.timecount/ai.timegap-i) < (ai.time-2)/ai.timegap+1 {
 			step := i/ai.framegap - 1
 			ai.palfx[step].remap = sd.fx.remap
-			sprs.add(&SprData{&img.anim, &ai.palfx[step], img.pos,
-				img.scl, ai.alpha, img.priority - step, // Afterimages decrease in sprpriority over time
-				img.rot, img.ascl, false, sd.bright, sd.oldVer, sd.facing,
-				sd.airOffsetFix, img.projection, img.fLength, sd.window})
+			sprs.add(&SprData{
+				anim:         &img.anim,
+				fx:           &ai.palfx[step],
+				pos:          img.pos,
+				scl:          img.scl,
+				alpha:        ai.alpha,
+				priority:     img.priority - step, // Afterimages decrease in sprpriority over time
+				rot:          img.rot,
+				ascl:         img.ascl,
+				screen:       false,
+				undarken:     sd.undarken,
+				oldVer:       sd.oldVer,
+				facing:       sd.facing,
+				airOffsetFix: sd.airOffsetFix,
+				projection:   img.projection,
+				fLength:      img.fLength,
+				window:       sd.window,
+			})
 			// Afterimages don't cast shadows or reflections
 		}
 	}
@@ -1543,14 +1552,10 @@ func (e *Explod) update(oldVer bool, playerNo int) {
 	// Set scale
 	drawscale := [2]float32{facing * scale[0] * e.localscl, e.vfacing * scale[1] * e.localscl}
 
-	centerOffset := (e.interPos[0] - sys.cam.Pos[0])
-
 	// Apply Z axis perspective
 	if e.space == Space_stage && sys.zEnabled() {
-		zscale := sys.updateZScale(e.pos[2], e.localscl)
-		drawpos[0] -= centerOffset * (1 - zscale)
-		drawpos[1] *= zscale
-		drawpos[1] += sys.posZtoY(e.interPos[2], e.localscl)
+		zscale := sys.updateZScale(e.interPos[2], e.localscl)
+		drawpos = sys.drawposXYfromZ(drawpos, e.localscl, e.interPos[2], zscale)
 		drawscale[0] *= zscale
 		drawscale[1] *= zscale
 	}
@@ -1563,9 +1568,24 @@ func (e *Explod) update(oldVer bool, playerNo int) {
 	}
 
 	// Add sprite to draw list
-	sd := &SprData{e.anim, pfx, drawpos, drawscale,
-		alp, e.sprpriority + int32(e.pos[2]*e.localscl), rot, [...]float32{1, 1},
-		e.space == Space_screen, playerNo == sys.superplayer, oldVer, facing, [2]float32{1, 1}, int32(e.projection), fLength, ewin}
+	sd := &SprData{
+		anim:         e.anim,
+		fx:           pfx,
+		pos:          drawpos,
+		scl:          drawscale,
+		alpha:        alp,
+		priority:     e.sprpriority + int32(e.pos[2]*e.localscl),
+		rot:          rot,
+		ascl:         [...]float32{1, 1},
+		screen:       e.space == Space_screen,
+		undarken:     playerNo == sys.superplayerno,
+		oldVer:       oldVer,
+		facing:       facing,
+		airOffsetFix: [2]float32{1, 1},
+		projection:   int32(e.projection),
+		fLength:      fLength,
+		window:       ewin,
+	}
 	sprs.add(sd)
 
 	// Add shadow if color is not 0
@@ -1575,7 +1595,15 @@ func (e *Explod) update(oldVer bool, playerNo int) {
 		if sdwalp < 0 {
 			sdwalp = 256
 		}
-		sys.shadows.add(&ShadowSprite{sd, sdwclr, sdwalp, [2]float32{0, 0}, [2]float32{0, 0}, 0})
+		drawZoff := sys.posZtoYoffset(e.interPos[2], e.localscl)
+		sys.shadows.add(&ShadowSprite{
+			SprData:       sd,
+			shadowColor:   sdwclr,
+			shadowAlpha:   sdwalp,
+			shadowOffset:  [2]float32{0, sys.stage.sdw.yscale*drawZoff + drawZoff},
+			reflectOffset: [2]float32{0, sys.stage.reflection.yscale*drawZoff + drawZoff},
+			fadeOffset:    drawZoff,
+		})
 	}
 	if sys.tickNextFrame() {
 
@@ -2027,8 +2055,8 @@ func (p *Projectile) tradeDetection(playerNo, index int) {
 			}
 
 			// Run Z axis check
-			if !sys.zAxisOverlap(p.pos[2], p.hitdef.attack.depth[0], p.hitdef.attack.depth[1], p.localscl,
-				pr.pos[2], pr.hitdef.attack.depth[0], pr.hitdef.attack.depth[1], pr.localscl) {
+			if !sys.zAxisOverlap(p.pos[2], p.hitdef.attack_depth[0], p.hitdef.attack_depth[1], p.localscl,
+				pr.pos[2], pr.hitdef.attack_depth[0], pr.hitdef.attack_depth[1], pr.localscl) {
 				continue
 			}
 
@@ -2130,13 +2158,9 @@ func (p *Projectile) cueDraw(oldVer bool) {
 	scl := [...]float32{p.facing * p.scale[0] * p.localscl * p.zScale,
 		p.scale[1] * p.localscl * p.zScale}
 
-	centerOffset := (p.interPos[0] - sys.cam.Pos[0])
-
 	// Apply Z axis perspective
 	if sys.zEnabled() {
-		pos[0] -= centerOffset * (1 - p.zScale)
-		pos[1] *= p.zScale
-		pos[1] += sys.posZtoY(p.interPos[2], p.localscl)
+		pos = sys.drawposXYfromZ(pos, p.localscl, p.interPos[2], p.zScale)
 	}
 
 	sprs := &sys.spritesLayer0
@@ -2148,15 +2172,38 @@ func (p *Projectile) cueDraw(oldVer bool) {
 
 	if p.ani != nil {
 		// Add sprite to draw list
-		sd := &SprData{p.ani, p.palfx, pos, scl, [2]int32{-1},
-			p.sprpriority + int32(p.pos[2]*p.localscl), Rotation{p.facing * p.angle, 0, 0}, [...]float32{1, 1}, false, p.playerno == sys.superplayer,
-			sys.cgi[p.playerno].mugenver[0] != 1, p.facing, [2]float32{1, 1}, 0, 0, [4]float32{0, 0, 0, 0}}
+		sd := &SprData{
+			anim:         p.ani,
+			fx:           p.palfx,
+			pos:          pos,
+			scl:          scl,
+			alpha:        [2]int32{-1},
+			priority:     p.sprpriority + int32(p.pos[2]*p.localscl),
+			rot:          Rotation{p.facing * p.angle, 0, 0},
+			ascl:         [...]float32{1, 1},
+			screen:       false,
+			undarken:     p.playerno == sys.superplayerno,
+			oldVer:       sys.cgi[p.playerno].mugenver[0] != 1,
+			facing:       p.facing,
+			airOffsetFix: [2]float32{1, 1},
+			projection:   0,
+			fLength:      0,
+			window:       [4]float32{0, 0, 0, 0},
+		}
 		p.aimg.recAndCue(sd, sys.tickNextFrame() && notpause, false, p.layerno)
 		sprs.add(sd)
 		// Add a shadow if color is not 0
-		sdwclr := p.shadow[0]<<16 | p.shadow[1]&255<<8 | p.shadow[2]&255
+		sdwclr := p.shadow[0]<<16 | p.shadow[1]&0xff<<8 | p.shadow[2]&0xff
 		if sdwclr != 0 {
-			sys.shadows.add(&ShadowSprite{sd, sdwclr, 0, [2]float32{0, p.pos[2]}, [2]float32{0, p.pos[2]}, 0})
+			drawZoff := sys.posZtoYoffset(p.interPos[2], p.localscl)
+			sys.shadows.add(&ShadowSprite{
+				SprData:       sd,
+				shadowColor:   sdwclr,
+				shadowAlpha:   255,
+				shadowOffset:  [2]float32{0, sys.stage.sdw.yscale*drawZoff + drawZoff},
+				reflectOffset: [2]float32{0, sys.stage.reflection.yscale*drawZoff + drawZoff},
+				fadeOffset:    drawZoff,
+			})
 		}
 	}
 }
@@ -2388,7 +2435,6 @@ type Char struct {
 	pos                 [3]float32
 	interPos            [3]float32 // Interpolated position. For the visuals when game and logic speed are different
 	oldPos              [3]float32
-	dustOldPos          float32
 	vel                 [3]float32
 	facing              float32
 	ivar                [NumVar + NumSysVar]int32
@@ -2437,6 +2483,8 @@ type Char struct {
 	ownclsnscale    bool
 	pushPriority    int32
 	prevfallflag    bool
+	dustOldPos      [3]float32
+	dustTime        int
 }
 
 // Add a new char to the game
@@ -2528,6 +2576,7 @@ func (c *Char) clearState() {
 	c.counterHit = false
 	c.hitdefContact = false
 	c.fallTime = 0
+	c.dustTime = 0
 }
 
 func (c *Char) clsnOverlapTrigger(box1, pid, box2 int32) bool {
@@ -3765,8 +3814,12 @@ func (c *Char) bottomEdge() float32 {
 	return sys.cam.ScreenPos[1]/c.localscl + c.gameHeight()
 }
 
+func (c *Char) botBoundBodyDist() float32 {
+	return c.botBoundDist() - c.depthEdge[0]
+}
+
 func (c *Char) botBoundDist() float32 {
-	return -c.depthEdge[0] + sys.zmax/c.localscl - c.pos[2]
+	return sys.zmax/c.localscl - c.pos[2]
 }
 
 func (c *Char) canRecover() bool {
@@ -4614,8 +4667,12 @@ func (c *Char) topEdge() float32 {
 	return sys.cam.ScreenPos[1] / c.localscl
 }
 
+func (c *Char) topBoundBodyDist() float32 {
+	return c.topBoundDist() - c.depthEdge[1]
+}
+
 func (c *Char) topBoundDist() float32 {
-	return c.depthEdge[1] + sys.zmin/c.localscl - c.pos[2]
+	return c.pos[2] - sys.zmin/c.localscl
 }
 
 func (c *Char) win() bool {
@@ -5048,7 +5105,7 @@ func (c *Char) helperPos(pt PosType, pos [3]float32, facing int32,
 			p[0] -= pos[0]
 		}
 		p[1] = pos[1]
-		p[2] = c.pos[2]
+		p[2] = pos[2]
 		*dstFacing *= c.facing
 	case PT_Left:
 		p[0] = c.leftEdge()*(c.localscl/localscl) + pos[0]
@@ -5056,15 +5113,16 @@ func (c *Char) helperPos(pt PosType, pos [3]float32, facing int32,
 		if isProj {
 			*dstFacing *= c.facing
 		}
+		p[2] = pos[2]
 	case PT_Right:
 		p[0] = c.rightEdge()*(c.localscl/localscl) + pos[0]
 		p[1] = pos[1]
 		if isProj {
 			*dstFacing *= c.facing
 		}
-		p[2] = c.pos[2]
+		p[2] = pos[2]
 	case PT_None:
-		p = [3]float32{pos[0], pos[1], c.pos[2]}
+		p = [3]float32{pos[0], pos[1], pos[2]}
 		if isProj {
 			*dstFacing *= c.facing
 		}
@@ -5481,13 +5539,13 @@ func (c *Char) setHitdefDefault(hd *HitDef) {
 			hd.hitonce = 0
 		}
 	}
-	// Assign a value to a NaN field
+	// Set a parameter if it's Nan
 	ifnanset := func(dst *float32, src float32) {
 		if math.IsNaN(float64(*dst)) {
 			*dst = src
 		}
 	}
-	// Assign a value to an IErr field
+	// Set a parameter if it's IErr
 	ifierrset := func(dst *int32, src int32) bool {
 		if *dst == IErr {
 			*dst = src
@@ -5520,6 +5578,7 @@ func (c *Char) setHitdefDefault(hd *HitDef) {
 	}
 	ifierrset(&hd.forcestand, Btoi(hd.ground_velocity[1] != 0)) // Having a Y velocity causes ForceStand
 	ifierrset(&hd.forcecrouch, 0)
+	// Cornerpush defaults to same as respective velocities if character has Ikemenversion, instead of Mugen magic numbers
 	if hd.attr&int32(ST_A) != 0 {
 		ifnanset(&hd.ground_cornerpush_veloff, 0)
 	} else {
@@ -5533,6 +5592,9 @@ func (c *Char) setHitdefDefault(hd *HitDef) {
 	ifnanset(&hd.down_cornerpush_veloff, hd.ground_cornerpush_veloff)
 	ifnanset(&hd.guard_cornerpush_veloff, hd.ground_cornerpush_veloff)
 	ifnanset(&hd.airguard_cornerpush_veloff, hd.ground_cornerpush_veloff)
+	// Attack depth defaults to character constant
+	ifnanset(&hd.attack_depth[0], c.size.attack.depth.front)
+	ifnanset(&hd.attack_depth[1], c.size.attack.depth.back)
 	// Super attack behaviour
 	if hd.attr&int32(AT_AH) != 0 {
 		ifierrset(&hd.hitgetpower,
@@ -6576,10 +6638,9 @@ func (c *Char) setPauseTime(pausetime, movetime int32) {
 }
 
 func (c *Char) setSuperPauseTime(pausetime, movetime int32, unhittable bool) {
-	if ^pausetime < sys.supertimebuffer || c.playerNo != c.ss.sb.playerNo ||
-		sys.superplayer == c.playerNo {
+	if ^pausetime < sys.supertimebuffer || c.playerNo != c.ss.sb.playerNo || sys.superplayerno == c.playerNo {
 		sys.supertimebuffer = ^pausetime
-		sys.superplayer = c.playerNo
+		sys.superplayerno = c.playerNo
 		if sys.superendcmdbuftime < 0 || sys.superendcmdbuftime > pausetime {
 			sys.superendcmdbuftime = 0
 		}
@@ -6646,8 +6707,17 @@ func (c *Char) inputWait() bool {
 	// This is not currently reproduced and may not be necessary
 }
 
-func (c *Char) makeDust(x, y, z float32) {
+func (c *Char) makeDust(x, y, z float32, spacing int) {
 	if c.asf(ASF_nomakedust) {
+		return
+	}
+	if spacing < 1 {
+		sys.appendToConsole(c.warn() + "Invalid MakeDust spacing")
+		spacing = 1
+	}
+	if c.dustTime >= spacing {
+		c.dustTime = 0
+	} else {
 		return
 	}
 	if e, i := c.newExplod(); e != nil {
@@ -7047,8 +7117,13 @@ func (c *Char) posUpdate() {
 			if AbsF(c.vel[0]) < 1 {
 				c.vel[0] = 0
 			}
+			c.vel[2] *= c.gi().movement.stand.friction
+			if AbsF(c.vel[2]) < 1 {
+				c.vel[2] = 0
+			}
 		case ST_C:
 			c.vel[0] *= c.gi().movement.crouch.friction
+			c.vel[2] *= c.gi().movement.crouch.friction
 		case ST_A:
 			c.gravity()
 		}
@@ -7628,7 +7703,7 @@ func (c *Char) hittableByChar(ghd *HitDef, getter *Char, gst StateType, proj boo
 				!getter.hasTargetOfHitdef(c.id) &&
 				getter.attrCheck(hd, c, c.ss.stateType) &&
 				c.clsnCheck(getter, 1, c.hitdef.p2clsncheck, true, false) &&
-				sys.zAxisOverlap(c.pos[2], c.hitdef.attack.depth[0], c.hitdef.attack.depth[1], c.localscl,
+				sys.zAxisOverlap(c.pos[2], c.hitdef.attack_depth[0], c.hitdef.attack_depth[1], c.localscl,
 					getter.pos[2], getter.depth[0], getter.depth[1], getter.localscl)
 		}
 	}
@@ -8051,6 +8126,7 @@ func (c *Char) actionRun() {
 		if c.helperIndex == 0 && c.gi().pctime >= 0 {
 			c.gi().pctime++
 		}
+		c.dustTime++
 	}
 	c.xScreenBound()
 	c.zDepthBound()
@@ -8183,9 +8259,9 @@ func (c *Char) update() {
 				}
 			}
 			// Engine dust effects
-			if ((c.ss.moveType == MT_H && (c.ss.stateType == ST_S || c.ss.stateType == ST_C)) || c.ss.no == 52) && c.pos[1] == 0 &&
-				AbsF(c.pos[0]-c.dustOldPos) >= 1 && c.ss.time%3 == 0 {
-				c.makeDust(0, 0, 0)
+			if ((c.ss.moveType == MT_H && (c.ss.stateType == ST_S || c.ss.stateType == ST_C)) || c.ss.no == 52) &&
+				c.pos[1] == 0 && (AbsF(c.pos[0]-c.dustOldPos[0]) >= 1 || AbsF(c.pos[2]-c.dustOldPos[2]) >= 1) {
+				c.makeDust(0, 0, 0, 3) // Default spacing of 3
 			}
 		}
 		if c.ss.moveType == MT_H {
@@ -8237,7 +8313,7 @@ func (c *Char) update() {
 		c.hoIdx = -1
 		c.hoKeepState = false
 		// Apply SuperPause p2defmul
-		if sys.supertimebuffer < 0 && c.teamside != sys.superplayer&1 {
+		if sys.supertimebuffer < 0 && c.teamside != sys.superplayerno&1 {
 			c.superDefenseMul *= sys.superp2defmul
 		}
 		// Update final defense
@@ -8287,10 +8363,18 @@ func (c *Char) tick() {
 		if c.isBound() {
 			if bt := sys.playerID(c.bindToId); bt != nil && !bt.pause() {
 				c.bindTime -= 1
+				// Fixes Binds of 1 immediately after PosSets (MUGEN 1.0/1.1 behavior)
+				if c.bindTime <= 0 {
+					c.bindToId = -1
+				}
 			}
 		} else {
 			if !c.pause() {
 				c.bindTime -= 1
+				// Fixes Binds of 1 immediately after PosSets (MUGEN 1.0/1.1 behavior)
+				if c.bindTime <= 0 {
+					c.bindToId = -1
+				}
 			}
 		}
 	}
@@ -8629,14 +8713,11 @@ func (c *Char) cueDraw() {
 		scl := [...]float32{c.facing * c.size.xscale * c.zScale * (320 / c.localcoord),
 			c.size.yscale * c.zScale * (320 / c.localcoord)}
 
-		centerOffset := (c.interPos[0] - sys.cam.Pos[0])
-
 		// Apply Z axis perspective
 		if sys.zEnabled() {
-			pos[0] -= centerOffset * (1 - c.zScale)
-			pos[1] *= c.zScale
-			pos[1] += sys.posZtoY(c.interPos[2], c.localscl)
+			pos = sys.drawposXYfromZ(pos, c.localscl, c.interPos[2], c.zScale)
 		}
+
 		//if sys.zEnabled() {
 		//	ratio := float32(1.618) // Possible stage parameter?
 		//	pos[0] *= 1 + (ratio-1)*(c.zScale-1)
@@ -8677,10 +8758,24 @@ func (c *Char) cueDraw() {
 			}
 		}
 		// Define sprite data
-		sd := &SprData{c.anim, c.getPalfx(), pos,
-			scl, c.alpha, c.sprPriority + int32(c.pos[2]*c.localscl), Rotation{agl, 0, 0}, c.angleScale, false,
-			c.playerNo == sys.superplayer, c.gi().mugenver[0] != 1, c.facing, airOffsetFix,
-			0, 0, [4]float32{0, 0, 0, 0}}
+		sd := &SprData{
+			anim:         c.anim,
+			fx:           c.getPalfx(),
+			pos:          pos,
+			scl:          scl,
+			alpha:        c.alpha,
+			priority:     c.sprPriority + int32(c.pos[2]*c.localscl),
+			rot:          Rotation{agl, 0, 0},
+			ascl:         c.angleScale,
+			screen:       false,
+			undarken:     c.playerNo == sys.superplayerno,
+			oldVer:       c.gi().mugenver[0] != 1,
+			facing:       c.facing,
+			airOffsetFix: airOffsetFix,
+			projection:   0,
+			fLength:      0,
+			window:       [4]float32{0, 0, 0, 0},
+		}
 		if !c.csf(CSF_trans) {
 			sd.alpha[0] = -1
 		}
@@ -8717,18 +8812,28 @@ func (c *Char) cueDraw() {
 				// Mugen uses some odd math for the shadow offset here, factoring in the stage's shadow scale
 				// Meaning the character's shadow offset constant is unable to offset it correctly in every stage
 				// Ikemen works differently and as you'd expect it to
-				drawZoff := sys.posZtoY(c.interPos[2], c.localscl)
-				sys.shadows.add(&ShadowSprite{sd, -1, sdwalp,
-					[2]float32{c.shadowOffset[0] * c.localscl, (c.size.shadowoffset+c.shadowOffset[1])*c.localscl + sys.stage.sdw.yscale*drawZoff + drawZoff},          // Shadow offset
-					[2]float32{c.reflectOffset[0] * c.localscl, (c.size.shadowoffset+c.reflectOffset[1])*c.localscl + sys.stage.reflection.yscale*drawZoff + drawZoff}, // Reflection offset
-					c.offsetY()}) // Fade offset
+				drawZoff := sys.posZtoYoffset(c.interPos[2], c.localscl)
+				sys.shadows.add(&ShadowSprite{
+					SprData:     sd,
+					shadowColor: -1,
+					shadowAlpha: sdwalp,
+					shadowOffset: [2]float32{
+						c.shadowOffset[0] * c.localscl,
+						(c.size.shadowoffset+c.shadowOffset[1])*c.localscl + sys.stage.sdw.yscale*drawZoff + drawZoff,
+					},
+					reflectOffset: [2]float32{
+						c.reflectOffset[0] * c.localscl,
+						(c.size.shadowoffset+c.reflectOffset[1])*c.localscl + sys.stage.reflection.yscale*drawZoff + drawZoff,
+					},
+					fadeOffset: c.offsetY() + drawZoff,
+				})
 			}
 		}
 	}
 	if sys.tickNextFrame() {
 		c.minus = 2
 		c.oldPos = c.pos
-		c.dustOldPos = c.pos[0]
+		c.dustOldPos = c.pos // We need this one separated because PosAdd and such change oldPos
 	}
 }
 
@@ -9939,8 +10044,8 @@ func (cl *CharList) hitDetection(getter *Char, proj bool) {
 					(p.hitdef.teamside-1 != getter.teamside) == (getter.hitdef.affectteam > 0)) &&
 					getter.hitdef.hitflag&int32(HF_P) != 0 &&
 					getter.projClsnCheck(p, 1, 2) &&
-					sys.zAxisOverlap(getter.pos[2], getter.hitdef.attack.depth[0], getter.hitdef.attack.depth[1], getter.localscl,
-						p.pos[2], p.hitdef.attack.depth[0], p.hitdef.attack.depth[1], p.localscl) {
+					sys.zAxisOverlap(getter.pos[2], getter.hitdef.attack_depth[0], getter.hitdef.attack_depth[1], getter.localscl,
+						p.pos[2], p.hitdef.attack_depth[0], p.hitdef.attack_depth[1], p.localscl) {
 					if getter.hitdef.p1stateno >= 0 && getter.stateChange1(getter.hitdef.p1stateno, getter.hitdef.playerNo) {
 						getter.setCtrl(false)
 					}
@@ -9961,7 +10066,7 @@ func (cl *CharList) hitDetection(getter *Char, proj bool) {
 					}
 
 					if getter.projClsnCheck(p, p.hitdef.p2clsncheck, 1) &&
-						sys.zAxisOverlap(p.pos[2], p.hitdef.attack.depth[0], p.hitdef.attack.depth[1], p.localscl,
+						sys.zAxisOverlap(p.pos[2], p.hitdef.attack_depth[0], p.hitdef.attack_depth[1], p.localscl,
 							getter.pos[2], getter.depth[0], getter.depth[1], getter.localscl) {
 
 						if ht := hitTypeGet(c, &p.hitdef, [...]float32{p.pos[0] - c.pos[0]*(c.localscl/p.localscl),
@@ -10080,10 +10185,10 @@ func (cl *CharList) hitDetection(getter *Char, proj bool) {
 					// Reversaldef checks attack depth vs attack depth
 					zok := true
 					if c.hitdef.reversal_attr > 0 {
-						zok = sys.zAxisOverlap(c.pos[2], c.hitdef.attack.depth[0], c.hitdef.attack.depth[1], c.localscl,
-							getter.pos[2], getter.hitdef.attack.depth[0], getter.hitdef.attack.depth[1], getter.localscl)
+						zok = sys.zAxisOverlap(c.pos[2], c.hitdef.attack_depth[0], c.hitdef.attack_depth[1], c.localscl,
+							getter.pos[2], getter.hitdef.attack_depth[0], getter.hitdef.attack_depth[1], getter.localscl)
 					} else {
-						zok = sys.zAxisOverlap(c.pos[2], c.hitdef.attack.depth[0], c.hitdef.attack.depth[1], c.localscl,
+						zok = sys.zAxisOverlap(c.pos[2], c.hitdef.attack_depth[0], c.hitdef.attack_depth[1], c.localscl,
 							getter.pos[2], getter.depth[0], getter.depth[1], getter.localscl)
 					}
 

@@ -3213,7 +3213,11 @@ func triggerFunctions(l *lua.LState) {
 		l.Push(lua.LNumber(sys.debugWC.bottomEdge()))
 		return 1
 	})
-	luaRegister(l, "botboundDist", func(*lua.LState) int {
+	luaRegister(l, "botboundbodydist", func(*lua.LState) int {
+		l.Push(lua.LNumber(sys.debugWC.botBoundBodyDist()))
+		return 1
+	})
+	luaRegister(l, "botbounddist", func(*lua.LState) int {
 		l.Push(lua.LNumber(sys.debugWC.botBoundDist()))
 		return 1
 	})
@@ -4982,7 +4986,11 @@ func triggerFunctions(l *lua.LState) {
 		l.Push(lua.LNumber(sys.debugWC.topEdge()))
 		return 1
 	})
-	luaRegister(l, "topBounddist", func(*lua.LState) int {
+	luaRegister(l, "topboundbodydist", func(*lua.LState) int {
+		l.Push(lua.LNumber(sys.debugWC.topBoundBodyDist()))
+		return 1
+	})
+	luaRegister(l, "topbounddist", func(*lua.LState) int {
 		l.Push(lua.LNumber(sys.debugWC.topBoundDist()))
 		return 1
 	})

@@ -956,7 +956,7 @@ type SprData struct {
 	rot          Rotation
 	ascl         [2]float32
 	screen       bool
-	bright       bool
+	undarken     bool // Ignore SuperPause "darken"
 	oldVer       bool
 	facing       float32
 	airOffsetFix [2]float32 // posLocalscl replacement
@@ -1005,7 +1005,7 @@ func (dl DrawList) draw(cameraX, cameraY, cameraScl float32) {
 		s.anim.srcAlpha = int16(s.alpha[0])
 		s.anim.dstAlpha = int16(s.alpha[1])
 		ob := sys.brightness
-		if s.bright {
+		if s.undarken {
 			sys.brightness = 256
 		}
 		var pos [2]float32
