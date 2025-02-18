@@ -1606,7 +1606,7 @@ func systemScriptInit(l *lua.LState) {
 		return 1
 	})
 	luaRegister(l, "getClipboardString", func(*lua.LState) int {
-		s := sys.window.Window.GetClipboardString()
+		s := sys.window.GetClipboardString()
 		l.Push(lua.LString(s))
 		return 1
 	})
