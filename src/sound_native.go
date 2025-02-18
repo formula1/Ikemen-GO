@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"os"
 
 	"github.com/gopxl/beep/v2"
 	"github.com/gopxl/beep/v2/effects"
@@ -24,6 +23,18 @@ const (
 	audioResampleQuality = 1
 	audioSoundFont       = "sound/soundfont.sf2" // default path for MIDI soundfont
 )
+
+var SOUND_MIXER = &beep.Mixer{}
+
+func SpeakerInit(sampleRate int32, bufferSize int) error {
+	speaker.Init(beep.SampleRate(sampleRate), bufferSize)
+	speaker.Play(NewNormalizer(SOUND_MIXER))
+	return nil
+}
+
+func SpeakerClose() {
+	speaker.Close()
+}
 
 // ------------------------------------------------------------------
 // Normalizer
@@ -199,7 +210,7 @@ func (bgm *Bgm) Open(filename string, loop, bgmVolume, bgmLoopStart, bgmLoopEnd,
 		return
 	}
 
-	f, err := os.Open(bgm.filename)
+	f, err := fs.Open(bgm.filename)
 	if err != nil {
 		// sys.bgm = *newBgm() // removing this gets pause step playsnd to work correctly 100% of the time
 		sys.errLog.Printf("Failed to open bgm: %v", err)
@@ -266,7 +277,7 @@ func (bgm *Bgm) Open(filename string, loop, bgmVolume, bgmLoopStart, bgmLoopEnd,
 }
 
 func loadSoundFont(filename string) (*midi.SoundFont, error) {
-	f, err := os.Open(filename)
+	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +380,7 @@ type Sound struct {
 	length  int
 }
 
-func readSound(f *os.File, size uint32) (*Sound, error) {
+func readSound(f File, size uint32) (*Sound, error) {
 	if size < 128 {
 		return nil, fmt.Errorf("wav size is too small")
 	}
@@ -423,7 +434,7 @@ func LoadSnd(filename string) (*Snd, error) {
 // If max > 0, the function returns immediately when a matching entry is found. It also gives up after "max" non-matching entries.
 func LoadSndFiltered(filename string, keepItem func([2]int32) bool, max uint32) (*Snd, error) {
 	s := newSnd()
-	f, err := os.Open(filename)
+	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +611,7 @@ func (s *SoundChannel) Play(sound *Sound, group, number, loop int32, freqmul flo
 	resampler := beep.Resample(audioResampleQuality, srcRate, dstRate, s.sfx)
 	s.ctrl = &beep.Ctrl{Streamer: resampler}
 	s.streamer.Seek(startPosition)
-	sys.soundMixer.Add(s.ctrl)
+	SOUND_MIXER.Add(s.ctrl)
 }
 func (s *SoundChannel) IsPlaying() bool {
 	return s.sound != nil

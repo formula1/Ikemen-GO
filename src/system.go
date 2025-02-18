@@ -17,9 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gopxl/beep/v2"
-	"github.com/gopxl/beep/v2/speaker"
-	"github.com/ikemen-engine/glfont"
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -41,7 +38,6 @@ var sys = System{
 	brightness:        256,
 	roundTime:         -1,
 	turnsRecoveryRate: 1.0 / 300,
-	soundMixer:        &beep.Mixer{},
 	bgm:               *newBgm(),
 	soundChannels:     newSoundChannels(16),
 	allPalFX:          *newPalFX(),
@@ -98,7 +94,6 @@ type System struct {
 	debugFont               *TextSprite
 	debugDraw               bool
 	debugRef                [2]int // player number, helper index
-	soundMixer              *beep.Mixer
 	bgm                     Bgm
 	soundChannels           *SoundChannels
 	allPalFX, bgPalFX       PalFX
@@ -391,8 +386,7 @@ func (s *System) init(w, h int32) *lua.LState {
 	gfx.Init()
 	gfx.BeginFrame(false)
 	// And the audio.
-	speaker.Init(beep.SampleRate(sys.cfg.Sound.SampleRate), audioOutLen)
-	speaker.Play(NewNormalizer(s.soundMixer))
+	SpeakerInit(sys.cfg.Sound.SampleRate, audioOutLen)
 	l := lua.NewState()
 	l.Options.IncludeGoStackTrace = true
 	l.OpenLibs()
@@ -456,7 +450,7 @@ func (s *System) shutdown() {
 	}
 	gfx.Close()
 	s.window.Close()
-	speaker.Close()
+	SpeakerClose()
 }
 func (s *System) setWindowSize(w, h int32) {
 	s.scrrect[2], s.scrrect[3] = w, h
