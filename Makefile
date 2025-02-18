@@ -10,19 +10,25 @@ srcFiles=src/anim.go \
 	src/common.go \
 	src/compiler.go \
 	src/compiler_functions.go \
+	src/filesystem.go \
+	src/filesystem_native.go \
 	src/font.go \
+	src/fontrenderer.go \
+	src/fontrenderer_native.go \
 	src/image.go \
 	src/input.go \
 	src/lifebar.go \
 	src/main.go \
 	src/render.go \
+	src/render_native.go \
 	src/script.go \
-	src/sound.go \
+	src/sound_native.go \
 	src/stage.go \
 	src/stdout_windows.go \
 	src/system.go \
 	src/util_desktop.go \
 	src/util_js.go
+
 
 # Windows 64-bit target
 Ikemen_GO.exe: ${srcFiles}
