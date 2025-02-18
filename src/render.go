@@ -5,7 +5,6 @@ import (
 	"math"
 
 	mgl "github.com/go-gl/mathgl/mgl32"
-	"github.com/ikemen-engine/glfont"
 )
 
 type Texture interface {
@@ -111,7 +110,7 @@ var cubemapFilteringFragShader string
 
 // The global, platform-specific rendering backend
 var gfx Renderer
-var gfxFont glfont.FontRenderer
+var gfxFont FontRenderer
 
 // Blend constants
 type BlendFunc int
