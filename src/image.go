@@ -732,7 +732,7 @@ func (s *Sprite) readHeader(r io.Reader, ofs, size *uint32, link *uint16) error 
 	return nil
 }
 
-func (s *Sprite) readPcxHeader(f *os.File, offset int64) error {
+func (s *Sprite) readPcxHeader(f File, offset int64) error {
 	f.Seek(offset, 0)
 	read := func(x interface{}) error {
 		return binary.Read(f, binary.LittleEndian, x)
@@ -802,7 +802,7 @@ func (s *Sprite) RlePcxDecode(rle []byte) (p []byte) {
 	s.rle = 0
 	return
 }
-func (s *Sprite) read(f *os.File, sh *SffHeader, offset int64, datasize uint32,
+func (s *Sprite) read(f File, sh *SffHeader, offset int64, datasize uint32,
 	nextSubheader uint32, prev *Sprite, pl *PaletteList, c00 bool) error {
 	if int64(nextSubheader) > offset {
 		// Ignore datasize except last
@@ -1056,7 +1056,7 @@ func (s *Sprite) Lz5Decode(rle []byte) (p []byte) {
 	}
 	return
 }
-func (s *Sprite) readV2(f *os.File, offset int64, datasize uint32) error {
+func (s *Sprite) readV2(f File, offset int64, datasize uint32) error {
 	var px []byte
 	var isRaw bool = false
 
@@ -1232,7 +1232,7 @@ func loadSff(filename string, char bool) (*Sff, error) {
 	}
 	s := newSff()
 	s.filename = filename
-	f, err := os.Open(filename)
+	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -1376,7 +1376,7 @@ func loadSff(filename string, char bool) (*Sff, error) {
 }
 func preloadSff(filename string, char bool, preloadSpr map[[2]int16]bool) (*Sff, []int32, error) {
 	sff := newSff()
-	f, err := os.Open(filename)
+	f, err := fs.Open(filename)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1565,8 +1565,8 @@ func captureScreen() {
 	}
 	for i := sys.captureNum; i < 999; i++ {
 		filename := fmt.Sprintf("%sikemen%03d.png", sys.cfg.Config.ScreenshotFolder, i)
-		if _, err := os.Stat(filename); os.IsNotExist(err) {
-			file, _ := os.Create(filename)
+		if _, err := fs.Stat(filename); os.IsNotExist(err) {
+			file, _ := fs.Create(filename)
 			defer file.Close()
 			png.Encode(file, img)
 			sys.captureNum = i

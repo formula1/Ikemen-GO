@@ -382,7 +382,7 @@ func NormalizeNewlines(input string) string {
 }
 
 func LoadText(filename string) (string, error) {
-	bytes, err := os.ReadFile(filename)
+	bytes, err := fs.ReadFile(filename)
 	if err != nil {
 		return "", err
 	}
@@ -394,7 +394,7 @@ func LoadText(filename string) (string, error) {
 }
 
 func FileExist(filename string) string {
-	if info, err := os.Stat(filename); !os.IsNotExist(err) {
+	if info, err := fs.Stat(filename); !os.IsNotExist(err) {
 		if info == nil || info.IsDir() {
 			return ""
 		}

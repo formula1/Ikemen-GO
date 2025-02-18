@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"math"
-	"os"
 	"path/filepath"
 	"strings"
 	"unsafe"
@@ -10449,7 +10448,7 @@ func (sc loadFile) Run(c *Char, _ []int32) bool {
 		return true
 	})
 	if path != "" {
-		decodeFile, err := os.Open(filepath.Dir(c.gi().def) + "/" + path)
+		decodeFile, err := fs.Open(filepath.Dir(c.gi().def) + "/" + path)
 		if err != nil {
 			defer decodeFile.Close()
 			return false
@@ -10773,7 +10772,7 @@ func (sc saveFile) Run(c *Char, _ []int32) bool {
 		return true
 	})
 	if path != "" {
-		encodeFile, err := os.Create(filepath.Dir(c.gi().def) + "/" + path)
+		encodeFile, err := fs.Create(filepath.Dir(c.gi().def) + "/" + path)
 		if err != nil {
 			panic(err)
 		}

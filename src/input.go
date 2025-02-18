@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/binary"
 	"net"
-	"os"
 	"strings"
 	"time"
 )
@@ -1078,7 +1077,7 @@ type NetInput struct {
 	time         int32
 	stoppedcnt   int32
 	delay        int32
-	rep          *os.File
+	rep          File
 	host         bool
 	preFightTime int32
 }
@@ -1364,14 +1363,14 @@ func (ni *NetInput) Update() bool {
 }
 
 type FileInput struct {
-	f      *os.File
+	f      File
 	ibit   [MaxSimul*2 + MaxAttachedChar]InputBits
 	pfTime int32
 }
 
 func OpenFileInput(filename string) *FileInput {
 	fi := &FileInput{}
-	fi.f, _ = os.Open(filename)
+	fi.f, _ = fs.Open(filename)
 	return fi
 }
 

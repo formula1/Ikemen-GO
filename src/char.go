@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"strings"
 )
 
@@ -3293,10 +3292,10 @@ func (c *Char) loadPalette() {
 		tmp := 0
 		for i := 0; i < MaxPalNo; i++ {
 			pl := gi.palettedata.palList.Get(i)
-			var f *os.File
+			var f File
 			var err error
 			if LoadFile(&gi.pal[i], []string{gi.def, "", sys.motifDir, "data/"}, func(file string) error {
-				f, err = os.Open(file)
+				f, err = fs.Open(file)
 				return err
 			}) == nil {
 				for i := 255; i >= 0; i-- {

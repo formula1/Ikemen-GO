@@ -11,7 +11,6 @@ import (
 	"image/draw"
 	_ "image/jpeg"
 	"math"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -2143,7 +2142,7 @@ func loadEnvironment(filepath string) (*Environment, error) {
 	env.GGXSampleCount = 1024
 	env.GGXLUTSampleCount = 512
 	env.environmentIntensity = 1
-	file, err := os.Open(filepath)
+	file, err := fs.Open(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -2221,7 +2220,7 @@ func loadglTFStage(filepath string) (*Model, error) {
 				}
 			} else {
 				if err := LoadFile(&img.URI, []string{filepath, "", sys.motifDir, "data/"}, func(filename string) error {
-					data, err := os.ReadFile(filename)
+					data, err := fs.ReadFile(filename)
 					if err != nil {
 						return err
 					}

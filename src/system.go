@@ -364,14 +364,14 @@ func (s *System) init(w, h int32) *lua.LState {
 			shaderLocation = strings.Replace(shaderLocation, "\\", "/", -1)
 
 			// Load vert shaders.
-			content, err := os.ReadFile(shaderLocation + ".vert")
+			content, err := fs.ReadFile(shaderLocation + ".vert")
 			if err != nil {
 				chk(err)
 			}
 			s.externalShaders[0][i] = string(content) + "\x00"
 
 			// Load frag shaders.
-			content, err = os.ReadFile(shaderLocation + ".frag")
+			content, err = fs.ReadFile(shaderLocation + ".frag")
 			if err != nil {
 				chk(err)
 			}
@@ -424,7 +424,7 @@ func (s *System) init(w, h int32) *lua.LState {
 					os.Chdir("../../../")
 				}
 			}
-			f[i], err = os.Open(iconLocation)
+			f[i], err = fs.Open(iconLocation)
 			if err != nil {
 				var dErr = "Icon file can not be found.\nPanic: " + err.Error()
 				ShowErrorDialog(dErr)
@@ -2494,7 +2494,7 @@ type wincntMap map[string][]int32 // Map of character definitions to their win c
 // Initializes the win count map by reading from 'autolevel.save' file
 func (wm *wincntMap) init() {
 	if sys.autolevel {
-		b, err := os.ReadFile(sys.wincntFileName) // Read the autolevel.save file
+		b, err := fs.ReadFile(sys.wincntFileName) // Read the autolevel.save file
 		if err != nil {
 			return
 		}
@@ -2572,7 +2572,7 @@ func (wm *wincntMap) update() {
 			}
 			str += "\r\n"
 		}
-		f, err := os.Create(sys.wincntFileName)
+		f, err := fs.Create(sys.wincntFileName)
 		if err == nil {
 			f.Write([]byte(str))
 			chk(f.Close())

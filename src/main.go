@@ -38,14 +38,14 @@ func chkEX(err error, txt string, crash bool) bool {
 	return false
 }
 
-func createLog(p string) *os.File {
-	f, err := os.Create(p)
+func createLog(p string) File {
+	f, err := fs.Create(p)
 	if err != nil {
 		panic(err)
 	}
 	return f
 }
-func closeLog(f *os.File) {
+func closeLog(f File) {
 	f.Close()
 }
 
@@ -63,15 +63,15 @@ func main() {
 	}
 
 	// Make save directories, if they don't exist
-	os.Mkdir("save", os.ModeSticky|0755)
-	os.Mkdir("save/replays", os.ModeSticky|0755)
+	fs.Mkdir("save", os.ModeSticky|0755)
+	fs.Mkdir("save/replays", os.ModeSticky|0755)
 
 	processCommandLine()
 
 	// Try reading stats
-	if _, err := os.ReadFile("save/stats.json"); err != nil {
+	if _, err := fs.ReadFile("save/stats.json"); err != nil {
 		// If there was an error reading, write an empty json file
-		f, err := os.Create("save/stats.json")
+		f, err := fs.Create("save/stats.json")
 		chk(err)
 		f.Write([]byte("{}"))
 		chk(f.Close())
@@ -93,7 +93,7 @@ func main() {
 	//os.Mkdir("debug", os.ModeSticky|0755)
 
 	// Check if the main lua file exists.
-	if ftemp, err1 := os.Open(sys.cfg.Config.System); err1 != nil {
+	if ftemp, err1 := fs.Open(sys.cfg.Config.System); err1 != nil {
 		ftemp.Close()
 		var err2 = Error(
 			"Main lua file \"" + sys.cfg.Config.System + "\" error." +
