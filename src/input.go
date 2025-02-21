@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"net"
 	"strings"
 	"time"
 )
@@ -1065,9 +1064,20 @@ func (nb *NetBuffer) input(cb *InputBuffer, facing int32) {
 	}
 }
 
+type NetConnectionListener interface {
+	WaitForConnection() (NetConectionClient, error)
+	Close() error
+}
+
+type NetConectionClient interface {
+	Read(b []byte) (int, error)
+	Write(b []byte) (int, error)
+	Close() error
+}
+
 type NetInput struct {
-	ln           *net.TCPListener
-	conn         *net.TCPConn
+	ln           NetConnectionListener
+	conn         NetConectionClient
 	st           NetState
 	sendEnd      chan bool
 	recvEnd      chan bool
@@ -1132,15 +1142,15 @@ func (ni *NetInput) GetHostGuestRemap() (host, guest int) {
 }
 
 func (ni *NetInput) Accept(port string) error {
-	if ln, err := net.Listen("tcp", ":"+port); err != nil {
+	if ln, err := CreateNetConnectionListener(port); err != nil {
 		return err
 	} else {
-		ni.ln = ln.(*net.TCPListener)
+		ni.ln = ln
 		ni.host = true
 		ni.locIn, ni.remIn = ni.GetHostGuestRemap()
 		go func() {
 			ln := ni.ln
-			if conn, err := ln.AcceptTCP(); err == nil {
+			if conn, err := ln.WaitForConnection(); err == nil {
 				ni.conn = conn
 			}
 			ln.Close()
@@ -1153,8 +1163,8 @@ func (ni *NetInput) Connect(server, port string) {
 	ni.host = false
 	ni.remIn, ni.locIn = ni.GetHostGuestRemap()
 	go func() {
-		if conn, err := net.Dial("tcp", server+":"+port); err == nil {
-			ni.conn = conn.(*net.TCPConn)
+		if conn, err := CreateNetConnection(server, port); err == nil {
+			ni.conn = conn
 		}
 	}()
 }

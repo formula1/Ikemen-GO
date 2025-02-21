@@ -530,3 +530,33 @@ func CheckAxisForDpad(joy int, axes *[]float32, base int) string {
 func CheckAxisForTrigger(joy int, axes *[]float32) string {
 	return ""
 }
+
+type NoConnection struct{}
+
+func (conn NoConnection) Read(b []byte) (int, error) {
+	return 0, Error("Cannot Read")
+}
+func (conn NoConnection) Write(b []byte) (int, error) {
+	return 0, Error("Cannot Write")
+}
+func (conn NoConnection) Close() error {
+	return nil
+}
+
+type NoConnectionListener struct{}
+
+func (conn NoConnectionListener) Close() error {
+	return nil
+}
+
+func (listener NoConnectionListener) WaitForConnection() (NetConectionClient, error) {
+	return nil, Error("Cannot Wait for Connection")
+}
+
+func CreateNetConnectionListener(args ...string) (NetConnectionListener, error) {
+	return nil, Error("Cannot Listen for Connection")
+}
+
+func CreateNetConnection(args ...string) (NetConectionClient, error) {
+	return nil, Error("Cannot Initiate a Connection")
+}
