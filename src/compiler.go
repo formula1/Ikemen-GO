@@ -1823,100 +1823,136 @@ func (c *Compiler) expValue(out *BytecodeExp, in *string,
 			out.append(OC_const_size_weight)
 		case "size.pushfactor":
 			out.append(OC_const_size_pushfactor)
-		case "velocity.walk.fwd.x":
-			out.append(OC_const_velocity_walk_fwd_x)
-		case "velocity.walk.back.x":
-			out.append(OC_const_velocity_walk_back_x)
-		case "velocity.walk.up.x":
-			out.append(OC_const_velocity_walk_up_x)
-		case "velocity.walk.down.x":
-			out.append(OC_const_velocity_walk_down_x)
-		case "velocity.run.fwd.x":
-			out.append(OC_const_velocity_run_fwd_x)
-		case "velocity.run.fwd.y":
-			out.append(OC_const_velocity_run_fwd_y)
-		case "velocity.run.back.x":
-			out.append(OC_const_velocity_run_back_x)
-		case "velocity.run.back.y":
-			out.append(OC_const_velocity_run_back_y)
-		case "velocity.run.up.x":
-			out.append(OC_const_velocity_run_up_x)
-		case "velocity.run.up.y":
-			out.append(OC_const_velocity_run_up_y)
-		case "velocity.run.down.x":
-			out.append(OC_const_velocity_run_down_x)
-		case "velocity.run.down.y":
-			out.append(OC_const_velocity_run_down_y)
-		case "velocity.jump.y":
-			out.append(OC_const_velocity_jump_y)
-		case "velocity.jump.neu.x":
-			out.append(OC_const_velocity_jump_neu_x)
-		case "velocity.jump.back.x":
-			out.append(OC_const_velocity_jump_back_x)
-		case "velocity.jump.fwd.x":
-			out.append(OC_const_velocity_jump_fwd_x)
-		case "velocity.jump.up.x":
-			out.append(OC_const_velocity_jump_up_x)
-		case "velocity.jump.down.x":
-			out.append(OC_const_velocity_jump_down_x)
-		case "velocity.runjump.back.x":
-			out.append(OC_const_velocity_runjump_back_x)
-		case "velocity.runjump.back.y":
-			out.append(OC_const_velocity_runjump_back_y)
-		case "velocity.runjump.y":
-			out.append(OC_const_velocity_runjump_y)
-		case "velocity.runjump.fwd.x":
-			out.append(OC_const_velocity_runjump_fwd_x)
-		case "velocity.runjump.up.x":
-			out.append(OC_const_velocity_runjump_up_x)
-		case "velocity.runjump.down.x":
-			out.append(OC_const_velocity_runjump_down_x)
-		case "velocity.airjump.y":
-			out.append(OC_const_velocity_airjump_y)
-		case "velocity.airjump.neu.x":
-			out.append(OC_const_velocity_airjump_neu_x)
-		case "velocity.airjump.back.x":
-			out.append(OC_const_velocity_airjump_back_x)
-		case "velocity.airjump.fwd.x":
-			out.append(OC_const_velocity_airjump_fwd_x)
-		case "velocity.airjump.up.x":
-			out.append(OC_const_velocity_airjump_up_x)
-		case "velocity.airjump.down.x":
-			out.append(OC_const_velocity_airjump_down_x)
-		case "velocity.air.gethit.groundrecover.x":
-			out.append(OC_const_velocity_air_gethit_groundrecover_x)
-		case "velocity.air.gethit.groundrecover.y":
-			out.append(OC_const_velocity_air_gethit_groundrecover_y)
-		case "velocity.air.gethit.airrecover.mul.x":
-			out.append(OC_const_velocity_air_gethit_airrecover_mul_x)
-		case "velocity.air.gethit.airrecover.mul.y":
-			out.append(OC_const_velocity_air_gethit_airrecover_mul_y)
 		case "velocity.air.gethit.airrecover.add.x":
 			out.append(OC_const_velocity_air_gethit_airrecover_add_x)
 		case "velocity.air.gethit.airrecover.add.y":
 			out.append(OC_const_velocity_air_gethit_airrecover_add_y)
 		case "velocity.air.gethit.airrecover.back":
 			out.append(OC_const_velocity_air_gethit_airrecover_back)
-		case "velocity.air.gethit.airrecover.fwd":
-			out.append(OC_const_velocity_air_gethit_airrecover_fwd)
-		case "velocity.air.gethit.airrecover.up":
-			out.append(OC_const_velocity_air_gethit_airrecover_up)
 		case "velocity.air.gethit.airrecover.down":
 			out.append(OC_const_velocity_air_gethit_airrecover_down)
+		case "velocity.air.gethit.airrecover.fwd":
+			out.append(OC_const_velocity_air_gethit_airrecover_fwd)
+		case "velocity.air.gethit.airrecover.mul.x":
+			out.append(OC_const_velocity_air_gethit_airrecover_mul_x)
+		case "velocity.air.gethit.airrecover.mul.y":
+			out.append(OC_const_velocity_air_gethit_airrecover_mul_y)
+		case "velocity.air.gethit.airrecover.up":
+			out.append(OC_const_velocity_air_gethit_airrecover_up)
+		case "velocity.air.gethit.groundrecover.x":
+			out.append(OC_const_velocity_air_gethit_groundrecover_x)
+		case "velocity.air.gethit.groundrecover.y":
+			out.append(OC_const_velocity_air_gethit_groundrecover_y)
 		case "velocity.air.gethit.ko.add.x":
 			out.append(OC_const_velocity_air_gethit_ko_add_x)
 		case "velocity.air.gethit.ko.add.y":
 			out.append(OC_const_velocity_air_gethit_ko_add_y)
 		case "velocity.air.gethit.ko.ymin":
 			out.append(OC_const_velocity_air_gethit_ko_ymin)
-		case "velocity.ground.gethit.ko.xmul":
-			out.append(OC_const_velocity_ground_gethit_ko_xmul)
+		case "velocity.airjump.back.x":
+			out.append(OC_const_velocity_airjump_back_x)
+		case "velocity.airjump.down.x":
+			out.append(OC_const_velocity_airjump_down_x)
+		case "velocity.airjump.down.y":
+			out.append(OC_const_velocity_airjump_down_y)
+		case "velocity.airjump.down.z":
+			out.append(OC_const_velocity_airjump_down_z)
+		case "velocity.airjump.fwd.x":
+			out.append(OC_const_velocity_airjump_fwd_x)
+		case "velocity.airjump.neu.x":
+			out.append(OC_const_velocity_airjump_neu_x)
+		case "velocity.airjump.up.x":
+			out.append(OC_const_velocity_airjump_up_x)
+		case "velocity.airjump.up.y":
+			out.append(OC_const_velocity_airjump_up_y)
+		case "velocity.airjump.up.z":
+			out.append(OC_const_velocity_airjump_up_z)
+		case "velocity.airjump.y":
+			out.append(OC_const_velocity_airjump_y)
 		case "velocity.ground.gethit.ko.add.x":
 			out.append(OC_const_velocity_ground_gethit_ko_add_x)
 		case "velocity.ground.gethit.ko.add.y":
 			out.append(OC_const_velocity_ground_gethit_ko_add_y)
+		case "velocity.ground.gethit.ko.xmul":
+			out.append(OC_const_velocity_ground_gethit_ko_xmul)
 		case "velocity.ground.gethit.ko.ymin":
 			out.append(OC_const_velocity_ground_gethit_ko_ymin)
+		case "velocity.jump.back.x":
+			out.append(OC_const_velocity_jump_back_x)
+		case "velocity.jump.down.x":
+			out.append(OC_const_velocity_jump_down_x)
+		case "velocity.jump.down.y":
+			out.append(OC_const_velocity_jump_down_y)
+		case "velocity.jump.down.z":
+			out.append(OC_const_velocity_jump_down_z)
+		case "velocity.jump.fwd.x":
+			out.append(OC_const_velocity_jump_fwd_x)
+		case "velocity.jump.neu.x":
+			out.append(OC_const_velocity_jump_neu_x)
+		case "velocity.jump.up.x":
+			out.append(OC_const_velocity_jump_up_x)
+		case "velocity.jump.up.y":
+			out.append(OC_const_velocity_jump_up_y)
+		case "velocity.jump.up.z":
+			out.append(OC_const_velocity_jump_up_z)
+		case "velocity.jump.y":
+			out.append(OC_const_velocity_jump_y)
+		case "velocity.run.back.x":
+			out.append(OC_const_velocity_run_back_x)
+		case "velocity.run.back.y":
+			out.append(OC_const_velocity_run_back_y)
+		case "velocity.run.down.x":
+			out.append(OC_const_velocity_run_down_x)
+		case "velocity.run.down.y":
+			out.append(OC_const_velocity_run_down_y)
+		case "velocity.run.down.z":
+			out.append(OC_const_velocity_run_down_z)
+		case "velocity.run.fwd.x":
+			out.append(OC_const_velocity_run_fwd_x)
+		case "velocity.run.fwd.y":
+			out.append(OC_const_velocity_run_fwd_y)
+		case "velocity.run.up.x":
+			out.append(OC_const_velocity_run_up_x)
+		case "velocity.run.up.y":
+			out.append(OC_const_velocity_run_up_y)
+		case "velocity.run.up.z":
+			out.append(OC_const_velocity_run_up_z)
+		case "velocity.runjump.back.x":
+			out.append(OC_const_velocity_runjump_back_x)
+		case "velocity.runjump.back.y":
+			out.append(OC_const_velocity_runjump_back_y)
+		case "velocity.runjump.down.x":
+			out.append(OC_const_velocity_runjump_down_x)
+		case "velocity.runjump.down.y":
+			out.append(OC_const_velocity_runjump_down_y)
+		case "velocity.runjump.down.z":
+			out.append(OC_const_velocity_runjump_down_z)
+		case "velocity.runjump.fwd.x":
+			out.append(OC_const_velocity_runjump_fwd_x)
+		case "velocity.runjump.up.x":
+			out.append(OC_const_velocity_runjump_up_x)
+		case "velocity.runjump.up.y":
+			out.append(OC_const_velocity_runjump_up_y)
+		case "velocity.runjump.up.z":
+			out.append(OC_const_velocity_runjump_up_z)
+		case "velocity.runjump.y":
+			out.append(OC_const_velocity_runjump_y)
+		case "velocity.walk.back.x":
+			out.append(OC_const_velocity_walk_back_x)
+		case "velocity.walk.down.x":
+			out.append(OC_const_velocity_walk_down_x)
+		case "velocity.walk.down.y":
+			out.append(OC_const_velocity_walk_down_y)
+		case "velocity.walk.down.z":
+			out.append(OC_const_velocity_walk_down_z)
+		case "velocity.walk.fwd.x":
+			out.append(OC_const_velocity_walk_fwd_x)
+		case "velocity.walk.up.x":
+			out.append(OC_const_velocity_walk_up_x)
+		case "velocity.walk.up.y":
+			out.append(OC_const_velocity_walk_up_y)
+		case "velocity.walk.up.z":
+			out.append(OC_const_velocity_walk_up_z)
 		case "movement.airjump.num":
 			out.append(OC_const_movement_airjump_num)
 		case "movement.airjump.height":
